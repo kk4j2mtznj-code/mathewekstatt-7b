@@ -6,14 +6,23 @@ const fmt=n=>String(n).replace('.',',');
 let skill='lesen',level=1,mode='practice',seed=0,qs=[],answers=[],checked=false,submitted=false,submitting=false,submissionId='';
 let mastered={};try{mastered=JSON.parse(localStorage.getItem('zuordnungen7b-progress')||'{}');}catch{}
 function start(s=skill,l=level,m=mode){skill=s;level=l;mode=m;seed=crypto.getRandomValues(new Uint32Array(1))[0];qs=m==='exit'?exitTasks(seed):makeTasks(s,l,seed);answers=qs.map(()=>'');checked=false;submitted=false;submitting=false;submissionId=crypto.randomUUID();render();}
-function graph(q,i){let g=q.graph;let lines='';const xx=x=>34+x*40,yy=y=>234-y*10;
-for(let x=0;x<=6;x++)lines+=`<line class="g" x1="${xx(x)}" y1="34" x2="${xx(x)}" y2="234"/><text x="${xx(x)-3}" y="251">${x}</text>`;
-for(let y=0;y<=18;y+=3)lines+=`<line class="g" x1="34" y1="${yy(y)}" x2="274" y2="${yy(y)}"/><text x="10" y="${yy(y)+4}">${y}</text>`;
+function graph(q,i){let g=q.graph;let lines='',ticks='',labels='';const xx=x=>34+x*40,yy=y=>234-y*10;
+for(let x=0;x<=6;x++){
+lines+=`<line class="g" x1="${xx(x)}" y1="${yy(18)}" x2="${xx(x)}" y2="234"/>`;
+ticks+=`<line class="tick" x1="${xx(x)}" y1="230" x2="${xx(x)}" y2="238"/>`;
+labels+=`<text x="${xx(x)}" y="254" text-anchor="middle" style="font-size:13px">${x}</text>`;
+}
+for(let y=0;y<=18;y++){
+const major=y%3===0,len=major?4:2;
+lines+=`<line class="g" x1="34" y1="${yy(y)}" x2="274" y2="${yy(y)}" style="stroke:${major?'#767b84':'#454951'};stroke-width:${major?'.8':'.5'}"/>`;
+ticks+=`<line class="tick" x1="${34-len}" y1="${yy(y)}" x2="${34+len}" y2="${yy(y)}"/>`;
+if(major)labels+=`<text x="24" y="${yy(y)}" text-anchor="end" dominant-baseline="middle" style="font-size:13px">${y}</text>`;
+}
 let lastY=Math.min(18,6*g.k+(g.offset||0)),lastX=(lastY-(g.offset||0))/g.k;
 let plot=!g.draw?`<line class="line" x1="34" y1="${yy(g.offset||0)}" x2="${xx(lastX)}" y2="${yy(lastY)}"/>`:'';
 let raw=number(answers[i]);if(g.draw&&Number.isFinite(raw)&&raw>=0&&raw<=18)plot+=`<circle class="dot" cx="${xx(g.x)}" cy="${yy(raw)}" r="5"/>`;
 if(checked&&g.draw)plot+=`<circle fill="#ff9b42" cx="${xx(g.x)}" cy="${yy(q.answer)}" r="4"/>`;
-return `<svg class="graph" viewBox="0 0 310 278" data-graph="${i}" role="img" aria-label="Preisdiagramm: Anzahl Getränke von 0 bis 6, Preis von 0 bis 18 Euro${g.draw?'. Klicke den gesuchten Punkt an oder nutze das Antwortfeld.':''}">${lines}<path class="a" fill="none" d="M34 30V234H288"/>${plot}<text x="34" y="18">Preis in €</text><text x="157" y="275">Anzahl Getränke</text></svg>`;}
+return `<svg class="graph" viewBox="0 0 310 282" data-graph="${i}" role="img" aria-label="Preisdiagramm: Anzahl Getränke von 0 bis 6, Preis von 0 bis 18 Euro. Jede waagerechte Rasterlinie entspricht 1 Euro. Die beschrifteten Teilstriche stehen bei 0, 3, 6, 9, 12, 15 und 18 Euro.${g.draw?' Klicke den gesuchten Punkt an oder nutze das Antwortfeld.':''}">${lines}<path class="a" fill="none" d="M34 42V234H286"/><g stroke="#f8f4ee" stroke-width="1.2">${ticks}</g>${labels}${plot}<text x="34" y="24">Preis in €</text><text x="286" y="277" text-anchor="end">Anzahl Getränke</text></svg>`;}
 function render(){let score=qs.reduce((s,q,i)=>s+(isCorrect(q,answers[i])?q.points:0),0),total=qs.reduce((s,q)=>s+q.points,0);const wrong=[...new Set(qs.filter((q,i)=>!isCorrect(q,answers[i])).map(q=>q.skill))];
 document.getElementById('nav').innerHTML=Object.entries(SKILLS).map(([id,name],i)=>`<button data-skill="${id}" aria-current="${mode==='practice'&&skill===id}">${String(i+1).padStart(2,'0')} · ${name}<small>${SUB[id]}</small></button>`).join('')+`<button id="checklist" aria-current="${mode==='checklist'}">Meine Checkliste<small>Bereit für die Arbeit?</small></button><button id="exit" class="exit" aria-current="${mode==='exit'}">Exit-Ticket<small>8 Aufgaben · 8 Punkte</small></button>`;
 document.querySelectorAll('[data-skill]').forEach(b=>b.onclick=()=>start(b.dataset.skill,level,'practice'));
